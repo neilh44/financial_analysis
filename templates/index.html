@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Document Analyzer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --light-color: #f8f9fa;
+            --dark-color: #343a40;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+            line-height: 1.6;
+        }
+
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: var(--dark-color);
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: var(--secondary-color);
+            font-size: 1.1em;
+        }
+
+        .upload-section {
+            text-align: center;
+            padding: 40px;
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+        }
+
+        .upload-section:hover {
+            border-color: var(--primary-color);
+            background-color: rgba(0,123,255,0.05);
+        }
+
+        .upload-section.drag-over {
+            border-color: var(--success-color);
+            background-color: rgba(40,167,69,0.05);
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-btn {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.1em;
+            transition: background-color 0.3s ease;
+        }
+
+        .upload-btn:hover {
+            background-color: #0056b3;
+        }
+
+        .language-section {
+            background-color: var(--light-color);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .language-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin-left: 10px;
+        }
+
+        .results-section {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .metric-card {
+            background-color: var(--light-color);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin: 10px 0;
+        }
+
+        .accuracy-meter {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress {
+            height: 100%;
+            background-color: var(--success-color);
+            transition: width 0.5s ease-in-out;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            color: var(--danger-color);
+            text-align: center;
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: rgba(220,53,69,0.1);
+            display: none;
+        }
+
+        .validation-item {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            background-color: var(--light-color);
+        }
+
+        .validation-item.success {
+            border-left: 4px solid var(--success-color);
+        }
+
+        .validation-item.error {
+            border-left: 4px solid var(--danger-color);
+        }
+
+        @media (max-width: 768px) {
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Financial Document Analyzer</h1>
+            <p>Upload your financial documents in any language for automated analysis</p>
+        </div>
+
+        <div class="upload-section" id="uploadSection">
+            <h2>Upload Document</h2>
+            <p>Drag and drop your PDF file here or click to select</p>
+            <input type="file" id="fileInput" class="file-input" accept=".pdf">
+            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">Select File</button>
+        </div>
+
+        <div class="loading" id="loadingIndicator">
+            <div class="loading-spinner"></div>
+            <p>Analyzing document... Please wait...</p>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+
+        <div class="results-section" id="resultsSection">
+            <div class="language-section">
+                <h3>Document Language</h3>
+                <span id="detectedLanguage" class="language-badge">English</span>
+            </div>
+
+            <div class="accuracy-meter">
+                <h3>Analysis Accuracy</h3>
+                <div class="progress-bar">
+                    <div class="progress" id="accuracyProgress"></div>
+                </div>
+                <p id="accuracyValue">0%</p>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <h3>Revenue</h3>
+                    <div class="metric-value" id="revenueValue">-</div>
+                </div>
+                <div class="metric-card">
+                    <h3>EBIT</h3>
+                    <div class="metric-value" id="ebitValue">-</div>
+                </div>
+                <div class="metric-card">
+                    <h3>EBITDA</h3>
+                    <div class="metric-value" id="ebitdaValue">-</div>
+                </div>
+                <div class="metric-card">
+                    <h3>Net Income</h3>
+                    <div class="metric-value" id="netIncomeValue">-</div>
+                </div>
+                <div class="metric-card">
+                    <h3>Depreciation</h3>
+                    <div class="metric-value" id="depreciationValue">-</div>
+                </div>
+                <div class="metric-card">
+                    <h3>Amortization</h3>
+                    <div class="metric-value" id="amortizationValue">-</div>
+                </div>
+                <div class="metric-card">
+                    <h3>Employees</h3>
+                    <div class="metric-value" id="employeesValue">-</div>
+                </div>
+            </div>
+
+            <div id="validationsSection">
+                <h3>Validation Results</h3>
+                <div id="validationsList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function formatNumber(number) {
+            if (number === null || number === undefined) return '-';
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(number);
+        }
+
+        function showError(message) {
+            const errorElement = document.getElementById('errorMessage');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+            setTimeout(() => {
+                errorElement.style.display = 'none';
+            }, 5000);
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            document.getElementById('uploadSection').classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            document.getElementById('uploadSection').classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            document.getElementById('uploadSection').classList.remove('drag-over');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.type === 'application/pdf') {
+                    handleFile(file);
+                } else {
+                    showError('Please upload a PDF file');
+                }
+            }
+        }
+
+        function handleFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            document.getElementById('loadingIndicator').style.display = 'block';
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('errorMessage').style.display = 'none';
+
+            fetch('/analyze', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('loadingIndicator').style.display = 'none';
+                
+                if (data.error) {
+                    showError(data.error);
+                    return;
+                }
+
+                // Update results
+                document.getElementById('detectedLanguage').textContent = data.language || 'Unknown';
+                document.getElementById('revenueValue').textContent = formatNumber(data.revenue);
+                document.getElementById('ebitValue').textContent = formatNumber(data.ebit);
+                document.getElementById('ebitdaValue').textContent = formatNumber(data.ebitda);
+                document.getElementById('netIncomeValue').textContent = formatNumber(data.net_income);
+                document.getElementById('depreciationValue').textContent = formatNumber(data.depreciation);
+                document.getElementById('amortizationValue').textContent = formatNumber(data.amortization);
+                document.getElementById('employeesValue').textContent = data.employees?.toLocaleString() || '-';
+
+                // Update accuracy
+                const accuracy = data.accuracy || 0;
+                document.getElementById('accuracyProgress').style.width = `${accuracy}%`;
+                document.getElementById('accuracyValue').textContent = `${accuracy.toFixed(1)}%`;
+
+                // Update validations
+                const validationsList = document.getElementById('validationsList');
+                validationsList.innerHTML = '';
+                if (data.validations) {
+                    Object.entries(data.validations).forEach(([key, value]) => {
+                        const validationItem = document.createElement('div');
+                        validationItem.className = `validation-item ${value ? 'success' : 'error'}`;
+                        validationItem.textContent = `${key.replace(/_/g, ' ')}: ${value ? 'Passed' : 'Failed'}`;
+                        validationsList.appendChild(validationItem);
+                    });
+                }
+
+                document.getElementById('resultsSection').style.display = 'block';
+            })
+            .catch(error => {
+                document.getElementById('loadingIndicator').style.display = 'none';
+                showError('An error occurred while analyzing the document');
+                console.error('Error:', error);
+            });
+        }
+
+        // Event Listeners
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        const uploadSection = document.getElementById('uploadSection');
+        uploadSection.addEventListener('dragover', handleDragOver);
+        uploadSection.addEventListener('dragleave', handleDragLeave);
+        uploadSection.addEventListener('drop', handleDrop);
+    </script>
+</body>
+</html>
