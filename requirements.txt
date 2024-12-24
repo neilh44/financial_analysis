@@ -6,3 +6,5 @@ langdetect
 groq
 python-dotenv
 pdfplumber>=0.7.0
+gunicorn
+python-dotenv

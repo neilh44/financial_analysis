@@ -28,6 +28,9 @@ if not GROQ_API_KEY:
 
 app = Flask(__name__)
 analyzer = MultilingualFinancialAnalyzer(GROQ_API_KEY)
+app.dir_path = os.path.dirname(os.path.realpath(__file__))
+app.template_folder = os.path.join(app.dir_path, 'templates')
+app.static_folder = os.path.join(app.dir_path, 'static')
 
 def is_valid_pdf(file_stream):
     """Validate PDF file before processing"""
