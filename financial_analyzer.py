@@ -219,11 +219,12 @@ Input text:
         return FinancialMetrics().__dict__
 
     def validate_financial_data(self, data: Dict[str, Any]) -> Dict[str, bool]:
-        """Validate extracted financial data"""
+        """Validate extracted financial data with null checks"""
+        revenue = data.get('revenue')
         return {
-            'has_revenue': data.get('revenue', 0) > self.validation_rules['min_revenue'],
-            'has_required_metrics': all(key in data for key in self.validation_rules['required_fields']),
-            'confidence_sufficient': data.get('confidence_score', 0) >= self.validation_rules['min_confidence'],
+            'has_revenue': bool(revenue and revenue > self.validation_rules['min_revenue']),
+            'has_required_metrics': all(data.get(key) is not None for key in self.validation_rules['required_fields']),
+            'confidence_sufficient': bool(data.get('confidence_score', 0) >= self.validation_rules['min_confidence']),
             'values_consistent': self._check_value_consistency(data),
             'ebitda_consistent': self._check_ebitda_consistency(data)
         }
