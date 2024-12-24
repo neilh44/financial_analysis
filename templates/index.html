@@ -284,111 +284,134 @@
     </div>
 
     <script>
-        function formatNumber(number) {
-            if (number === null || number === undefined) return '-';
-            return new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: 'USD',
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 0
-            }).format(number);
+        // Add file size validation
+        const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
+        function validateFile(file) {
+            if (!file.type.includes('pdf')) {
+                throw new Error('Please upload a PDF file');
+            }
+            if (file.size > MAX_FILE_SIZE) {
+                throw new Error('File size exceeds 10MB limit');
+            }
         }
 
-        function showError(message) {
-            const errorElement = document.getElementById('errorMessage');
-            errorElement.textContent = message;
-            errorElement.style.display = 'block';
-            setTimeout(() => {
-                errorElement.style.display = 'none';
-            }, 5000);
+        // Add retry logic
+        function handleFileWithRetry(file, maxRetries = 3) {
+            let retryCount = 0;
+
+            function attemptUpload() {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                return fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .catch(error => {
+                    if (retryCount < maxRetries) {
+                        retryCount++;
+                        return new Promise(resolve => setTimeout(resolve, 1000 * retryCount))
+                            .then(attemptUpload);
+                    }
+                    throw error;
+                });
+            }
+
+            return attemptUpload();
         }
 
-        function handleDragOver(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            document.getElementById('uploadSection').classList.add('drag-over');
+        function handleFile(file) {
+            try {
+                validateFile(file);
+                
+                const fileInfo = document.getElementById('fileInfo');
+                fileInfo.textContent = `Selected file: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`;
+
+                document.getElementById('loadingIndicator').style.display = 'block';
+                document.getElementById('resultsSection').style.display = 'none';
+                document.getElementById('errorMessage').style.display = 'none';
+
+                handleFileWithRetry(file)
+                    .then(displayResults)
+                    .catch(handleError);
+            } catch (error) {
+                handleError(error);
+            }
         }
 
-        function handleDragLeave(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            document.getElementById('uploadSection').classList.remove('drag-over');
+        function displayResults(data) {
+            document.getElementById('loadingIndicator').style.display = 'none';
+            
+            if (data.error) {
+                showError(data.error);
+                return;
+            }
+
+            Object.entries(data).forEach(([key, value]) => {
+                const element = document.getElementById(`${key}Value`);
+                if (element) {
+                    element.textContent = formatValue(key, value);
+                }
+            });
+
+            updateValidations(data.validations);
+            updateAccuracy(data.accuracy);
+            
+            document.getElementById('resultsSection').style.display = 'block';
         }
 
-        function handleDrop(e) {
+        function formatValue(key, value) {
+            if (value === null || value === undefined) return '-';
+            
+            switch(key) {
+                case 'revenue':
+                case 'ebit':
+                case 'ebitda':
+                case 'netIncome':
+                    return formatCurrency(value);
+                case 'employees':
+                    return value.toLocaleString();
+                default:
+                    return value.toString();
+            }
+        }
+
+        function handleError(error) {
+            document.getElementById('loadingIndicator').style.display = 'none';
+            showError(error.message || 'An error occurred while analyzing the document');
+            console.error('Error:', error);
+        }
+
+        // Add these utility functions
+        let debounceTimer;
+        function debounce(func, delay) {
+            return function() {
+                const context = this;
+                const args = arguments;
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => func.apply(context, args), delay);
+            };
+        }
+
+        // Update event listeners
+        const debouncedHandleDrop = debounce((e) => {
             e.preventDefault();
             e.stopPropagation();
             document.getElementById('uploadSection').classList.remove('drag-over');
             
             const files = e.dataTransfer.files;
             if (files.length > 0) {
-                const file = files[0];
-                if (file.type === 'application/pdf') {
-                    handleFile(file);
-                } else {
-                    showError('Please upload a PDF file');
-                }
+                handleFile(files[0]);
             }
-        }
+        }, 100);
 
-        function handleFile(file) {
-            const formData = new FormData();
-            formData.append('file', file);
-
-            document.getElementById('loadingIndicator').style.display = 'block';
-            document.getElementById('resultsSection').style.display = 'none';
-            document.getElementById('errorMessage').style.display = 'none';
-
-            fetch('/analyze', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('loadingIndicator').style.display = 'none';
-                
-                if (data.error) {
-                    showError(data.error);
-                    return;
-                }
-
-                // Update results
-                document.getElementById('detectedLanguage').textContent = data.language || 'Unknown';
-                document.getElementById('revenueValue').textContent = formatNumber(data.revenue);
-                document.getElementById('ebitValue').textContent = formatNumber(data.ebit);
-                document.getElementById('ebitdaValue').textContent = formatNumber(data.ebitda);
-                document.getElementById('netIncomeValue').textContent = formatNumber(data.net_income);
-                document.getElementById('depreciationValue').textContent = formatNumber(data.depreciation);
-                document.getElementById('amortizationValue').textContent = formatNumber(data.amortization);
-                document.getElementById('employeesValue').textContent = data.employees?.toLocaleString() || '-';
-
-                // Update accuracy
-                const accuracy = data.accuracy || 0;
-                document.getElementById('accuracyProgress').style.width = `${accuracy}%`;
-                document.getElementById('accuracyValue').textContent = `${accuracy.toFixed(1)}%`;
-
-                // Update validations
-                const validationsList = document.getElementById('validationsList');
-                validationsList.innerHTML = '';
-                if (data.validations) {
-                    Object.entries(data.validations).forEach(([key, value]) => {
-                        const validationItem = document.createElement('div');
-                        validationItem.className = `validation-item ${value ? 'success' : 'error'}`;
-                        validationItem.textContent = `${key.replace(/_/g, ' ')}: ${value ? 'Passed' : 'Failed'}`;
-                        validationsList.appendChild(validationItem);
-                    });
-                }
-
-                document.getElementById('resultsSection').style.display = 'block';
-            })
-            .catch(error => {
-                document.getElementById('loadingIndicator').style.display = 'none';
-                showError('An error occurred while analyzing the document');
-                console.error('Error:', error);
-            });
-        }
-
-        // Event Listeners
         document.getElementById('fileInput').addEventListener('change', function(e) {
             if (e.target.files.length > 0) {
                 handleFile(e.target.files[0]);
@@ -398,7 +421,20 @@
         const uploadSection = document.getElementById('uploadSection');
         uploadSection.addEventListener('dragover', handleDragOver);
         uploadSection.addEventListener('dragleave', handleDragLeave);
-        uploadSection.addEventListener('drop', handleDrop);
+        uploadSection.addEventListener('drop', debouncedHandleDrop);
+
+        // Add paste functionality
+        document.addEventListener('paste', (e) => {
+            const items = e.clipboardData.items;
+            for (let item of items) {
+                if (item.kind === 'file' && item.type.includes('pdf')) {
+                    const file = item.getAsFile();
+                    handleFile(file);
+                    break;
+                }
+            }
+        });
+
     </script>
 </body>
 </html>
