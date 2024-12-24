@@ -284,192 +284,131 @@
     </div>
 
     <script>
-        // Add file size validation
-        const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+        // File validation and handling
+        const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
         function validateFile(file) {
-            if (!file.type.includes('pdf')) {
-                throw new Error('Please upload a PDF file');
-            }
-            if (file.size > MAX_FILE_SIZE) {
-                throw new Error('File size exceeds 10MB limit');
-            }
-        }
-
-        // Add retry logic
-        function handleFileWithRetry(file, maxRetries = 3) {
-            let retryCount = 0;
-
-            function attemptUpload() {
-                const formData = new FormData();
-                formData.append('file', file);
-
-                return fetch('/analyze', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .catch(error => {
-                    if (retryCount < maxRetries) {
-                        retryCount++;
-                        return new Promise(resolve => setTimeout(resolve, 1000 * retryCount))
-                            .then(attemptUpload);
-                    }
-                    throw error;
-                });
-            }
-
-            return attemptUpload();
+            if (!file.type.includes('pdf')) throw new Error('Please upload a PDF file');
+            if (file.size > MAX_FILE_SIZE) throw new Error('File size exceeds 10MB limit');
         }
 
         function handleFile(file) {
             try {
                 validateFile(file);
-                
-                const fileInfo = document.getElementById('fileInfo');
-                fileInfo.textContent = `Selected file: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`;
-
-                document.getElementById('loadingIndicator').style.display = 'block';
-                document.getElementById('resultsSection').style.display = 'none';
-                document.getElementById('errorMessage').style.display = 'none';
-
-                handleFileWithRetry(file)
-                    .then(displayResults)
-                    .catch(handleError);
+                showLoading();
+                uploadFile(file);
             } catch (error) {
                 handleError(error);
             }
+        }
+
+        function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            fetch('/analyze', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                if (data.error) throw new Error(data.error);
+                displayResults(data);
+            })
+            .catch(handleError);
+        }
+
+        // UI Management
+        function showLoading() {
+            document.getElementById('loadingIndicator').style.display = 'block';
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('errorMessage').style.display = 'none';
         }
 
         function displayResults(data) {
             document.getElementById('loadingIndicator').style.display = 'none';
             
-            if (data.error) {
-                showError(data.error);
-                return;
-            }
+            const metrics = {
+                revenue: formatCurrency,
+                ebit: formatCurrency,
+                ebitda: formatCurrency,
+                netIncome: formatCurrency,
+                depreciation: formatCurrency,
+                amortization: formatCurrency,
+                employees: formatNumber
+            };
 
-            Object.entries(data).forEach(([key, value]) => {
+            Object.entries(metrics).forEach(([key, formatter]) => {
                 const element = document.getElementById(`${key}Value`);
                 if (element) {
-                    element.textContent = formatValue(key, value);
+                    element.textContent = data[key] != null ? formatter(data[key]) : '-';
                 }
             });
 
-            updateValidations(data.validations);
-            updateAccuracy(data.accuracy);
-            
+            if (data.detectedLanguage) {
+                const langElement = document.getElementById('detectedLanguage');
+                if (langElement) langElement.textContent = data.detectedLanguage.toUpperCase();
+            }
+
+            if (data.accuracy != null) {
+                const accuracyProgress = document.getElementById('accuracyProgress');
+                const accuracyValue = document.getElementById('accuracyValue');
+                if (accuracyProgress) accuracyProgress.style.width = `${data.accuracy}%`;
+                if (accuracyValue) accuracyValue.textContent = `${data.accuracy}%`;
+            }
+
             document.getElementById('resultsSection').style.display = 'block';
         }
 
-        function formatValue(key, value) {
-            if (value === null || value === undefined) return '-';
-            
-            switch(key) {
-                case 'revenue':
-                case 'ebit':
-                case 'ebitda':
-                case 'netIncome':
-                    return formatCurrency(value);
-                case 'employees':
-                    return value.toLocaleString();
-                default:
-                    return value.toString();
-            }
-        }
-
         function handleError(error) {
             document.getElementById('loadingIndicator').style.display = 'none';
-            showError(error.message || 'An error occurred while analyzing the document');
-            console.error('Error:', error);
-        }
-
-        function handleFile(file) {
-            try {
-                validateFile(file);
-                
-                const formData = new FormData();
-                formData.append('file', file);
-
-                document.getElementById('loadingIndicator').style.display = 'block';
-                document.getElementById('resultsSection').style.display = 'none';
-                document.getElementById('errorMessage').style.display = 'none';
-
-                fetch('/analyze', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(displayResults)
-                .catch(error => {
-                    handleError(error);
-                });
-            } catch (error) {
-                handleError(error);
-            }
-        }
-
-        function handleError(error) {
-            document.getElementById('loadingIndicator').style.display = 'none';
+            document.getElementById('resultsSection').style.display = 'none';
             const errorMessage = document.getElementById('errorMessage');
             errorMessage.textContent = error.message || 'Error processing document';
             errorMessage.style.display = 'block';
+            console.error('Error:', error);
         }
 
-        // Add these utility functions
-        let debounceTimer;
-        function debounce(func, delay) {
-            return function() {
-                const context = this;
-                const args = arguments;
-                clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(() => func.apply(context, args), delay);
-            };
+        // Formatting functions
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(value);
         }
 
-        // Update event listeners
-        const debouncedHandleDrop = debounce((e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            document.getElementById('uploadSection').classList.remove('drag-over');
-            
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                handleFile(files[0]);
-            }
-        }, 100);
+        function formatNumber(value) {
+            return new Intl.NumberFormat('en-US').format(value);
+        }
 
-        document.getElementById('fileInput').addEventListener('change', function(e) {
-            if (e.target.files.length > 0) {
-                handleFile(e.target.files[0]);
-            }
+        // Event Listeners
+        document.getElementById('fileInput').addEventListener('change', e => {
+            if (e.target.files.length > 0) handleFile(e.target.files[0]);
         });
 
         const uploadSection = document.getElementById('uploadSection');
-        uploadSection.addEventListener('dragover', handleDragOver);
-        uploadSection.addEventListener('dragleave', handleDragLeave);
-        uploadSection.addEventListener('drop', debouncedHandleDrop);
+        uploadSection.addEventListener('dragover', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadSection.classList.add('drag-over');
+        });
 
-        // Add paste functionality
-        document.addEventListener('paste', (e) => {
-            const items = e.clipboardData.items;
-            for (let item of items) {
-                if (item.kind === 'file' && item.type.includes('pdf')) {
-                    const file = item.getAsFile();
-                    handleFile(file);
-                    break;
-                }
-            }
+        uploadSection.addEventListener('dragleave', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadSection.classList.remove('drag-over');
+        });
+
+        uploadSection.addEventListener('drop', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadSection.classList.remove('drag-over');
+            if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
         });
 
     </script>
