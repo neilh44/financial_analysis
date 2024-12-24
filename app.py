@@ -11,6 +11,7 @@ class FinancialAnalyzer:
         self.depreciation_amortization = 0
         self.employees = 0
         self.accuracy_metrics = {}
+        self.valid_currencies = ['USD', 'EUR', 'GBP', 'JPY', 'CNY', 'INR']  # Add commonly used currencies
 
     def extract_revenue(self, data: Dict) -> float:
         """
