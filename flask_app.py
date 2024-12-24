@@ -1,4 +1,3 @@
-# flask_app.py
 from flask import Flask, render_template, request, jsonify, current_app
 from multilingual_analyzer import MultilingualFinancialAnalyzer
 import os
@@ -27,17 +26,18 @@ if not GROQ_API_KEY:
     raise ValueError("GROQ API key not found. Please set GROQ_API_KEY in your .env file.")
 
 app = Flask(__name__)
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB limit
 analyzer = MultilingualFinancialAnalyzer(GROQ_API_KEY)
 app.dir_path = os.path.dirname(os.path.realpath(__file__))
 app.template_folder = os.path.join(app.dir_path, 'templates')
 app.static_folder = os.path.join(app.dir_path, 'static')
+app.temp_folder = os.path.join(app.dir_path, 'temp')
 
 def is_valid_pdf(file_stream):
     """Validate PDF file before processing"""
     try:
-        # Read the first few bytes to check PDF signature
         pdf_signature = file_stream.read(4)
-        file_stream.seek(0)  # Reset file pointer
+        file_stream.seek(0)
         return pdf_signature == b'%PDF'
     except Exception as e:
         logger.error(f"PDF validation error: {str(e)}")
@@ -61,36 +61,43 @@ def analyze():
             logger.error("Empty filename")
             return jsonify({'error': 'No file selected'}), 400
             
-        if not file.filename.endswith('.pdf'):
+        if not file.filename.lower().endswith('.pdf'):
             logger.error(f"Invalid file type: {file.filename}")
             return jsonify({'error': 'Only PDF files are supported'}), 400
 
-        # Log the file info
-        logger.info(f"Processing file: {file.filename}, Size: {len(file.read())} bytes")
-        file.seek(0)  # Reset file pointer
+        if not is_valid_pdf(file):
+            logger.error("Invalid PDF format")
+            return jsonify({'error': 'Invalid PDF format'}), 400
 
-        try:
-            # Save and process file
-            temp_path = os.path.join(app.dir_path, 'temp', secure_filename(file.filename))
-            os.makedirs(os.path.dirname(temp_path), exist_ok=True)
-            file.save(temp_path)
-            
-            results = analyzer.extract_from_pdf(temp_path)
-            logger.info(f"Analysis results: {results}")
-            
-            return jsonify(results)
-            
-        except Exception as e:
-            logger.error(f"Processing error: {str(e)}", exc_info=True)
-            return jsonify({'error': 'Error processing document'}), 500
-            
-        finally:
-            if os.path.exists(temp_path):
-                os.unlink(temp_path)
+        # Create temp directory if it doesn't exist
+        os.makedirs(app.temp_folder, exist_ok=True)
+
+        # Use tempfile for secure temporary file creation
+        with tempfile.NamedTemporaryFile(delete=False, dir=app.temp_folder, suffix='.pdf') as temp_file:
+            file.save(temp_file.name)
+            temp_path = temp_file.name
+
+            try:
+                logger.info(f"Processing file: {file.filename}")
+                results = analyzer.extract_from_pdf(temp_path)
+                logger.info(f"Analysis results: {results}")
+                return jsonify(results)
                 
+            except Exception as e:
+                logger.error(f"Processing error: {str(e)}", exc_info=True)
+                return jsonify({'error': 'Error processing document'}), 500
+                
+            finally:
+                if os.path.exists(temp_path):
+                    os.unlink(temp_path)
+                    
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}", exc_info=True)
         return jsonify({'error': 'An unexpected error occurred'}), 500
+
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    return jsonify({'error': 'File too large. Maximum size is 10MB'}), 413
     
 if __name__ == '__main__':
     app.run(debug=True)

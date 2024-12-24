@@ -389,6 +389,43 @@
             console.error('Error:', error);
         }
 
+        function handleFile(file) {
+            try {
+                validateFile(file);
+                
+                const formData = new FormData();
+                formData.append('file', file);
+
+                document.getElementById('loadingIndicator').style.display = 'block';
+                document.getElementById('resultsSection').style.display = 'none';
+                document.getElementById('errorMessage').style.display = 'none';
+
+                fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(displayResults)
+                .catch(error => {
+                    handleError(error);
+                });
+            } catch (error) {
+                handleError(error);
+            }
+        }
+
+        function handleError(error) {
+            document.getElementById('loadingIndicator').style.display = 'none';
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = error.message || 'Error processing document';
+            errorMessage.style.display = 'block';
+        }
+
         // Add these utility functions
         let debounceTimer;
         function debounce(func, delay) {
