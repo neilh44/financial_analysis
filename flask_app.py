@@ -49,52 +49,44 @@ def index():
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    logger.info("Received analyze request")
-    
     try:
         if 'file' not in request.files:
-            logger.error("No file in request")
             return jsonify({'error': 'No file uploaded'}), 400
             
         file = request.files['file']
         if file.filename == '':
-            logger.error("Empty filename")
             return jsonify({'error': 'No file selected'}), 400
-            
-        if not file.filename.lower().endswith('.pdf'):
-            logger.error(f"Invalid file type: {file.filename}")
-            return jsonify({'error': 'Only PDF files are supported'}), 400
 
-        if not is_valid_pdf(file):
-            logger.error("Invalid PDF format")
-            return jsonify({'error': 'Invalid PDF format'}), 400
-
-        # Create temp directory if it doesn't exist
-        os.makedirs(app.temp_folder, exist_ok=True)
-
-        # Use tempfile for secure temporary file creation
-        with tempfile.NamedTemporaryFile(delete=False, dir=app.temp_folder, suffix='.pdf') as temp_file:
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_file:
             file.save(temp_file.name)
             temp_path = temp_file.name
 
             try:
-                logger.info(f"Processing file: {file.filename}")
                 results = analyzer.extract_from_pdf(temp_path)
-                logger.info(f"Analysis results: {results}")
-                return jsonify(results)
-                
-            except Exception as e:
-                logger.error(f"Processing error: {str(e)}", exc_info=True)
-                return jsonify({'error': 'Error processing document'}), 500
-                
+                if results.get('success') and results.get('data'):
+                    data = results['data']
+                    formatted_response = {
+                        'revenue': data['revenue'],
+                        'ebit': data['ebit'], 
+                        'ebitda': data['ebitda'],
+                        'netIncome': data['net_income'],
+                        'depreciation': data['depreciation'],
+                        'amortization': data['amortization'],
+                        'employees': data['employees'],
+                        'accuracy': data['accuracy'],
+                        'currency': data['currency'],
+                        'detectedLanguage': data['detected_language'],
+                        'validations': data['validations']
+                    }
+                    return jsonify(formatted_response)
+                return jsonify({'error': 'Analysis failed'}), 500
             finally:
-                if os.path.exists(temp_path):
-                    os.unlink(temp_path)
-                    
+                os.unlink(temp_path)
+                
     except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}", exc_info=True)
-        return jsonify({'error': 'An unexpected error occurred'}), 500
-
+        logger.error(f"Error: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+    
 @app.errorhandler(413)
 def request_entity_too_large(error):
     return jsonify({'error': 'File too large. Maximum size is 10MB'}), 413
