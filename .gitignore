@@ -1,8 +1,36 @@
-# Ignore virtual environment folder
+# Virtual environments
 venv/
+.venv/
+env/
+ENV/
 
-# Ignore system-specific files
-*.DS_Store
-*.log
+# Python cache
 __pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution/packaging
+dist/
+build/
+*.egg-info/
+
+# Environment variables
 .env
+.env.local
+
+# IDE settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Database
+*.db
+*.sqlite3
+
+# OS files
+.DS_Store
+Thumbs.db
