@@ -102,3 +102,133 @@ NameError: name 'logging' is not defined. Did you forget to import 'logging'
 2024-12-23 10:00:39,390 - werkzeug - INFO -  * Restarting with stat
 2024-12-23 10:01:02,766 - werkzeug - INFO -  * Restarting with stat
 2024-12-23 10:01:26,637 - werkzeug - INFO -  * Restarting with stat
+2024-12-27 18:25:30,514 - pdf_converter - INFO - PyMuPDF (fitz) is available
+2024-12-27 18:25:30,698 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.29.222:5000
+2024-12-27 18:25:30,698 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2024-12-27 18:25:37,418 - werkzeug - INFO - 127.0.0.1 - - [27/Dec/2024 18:25:37] "GET / HTTP/1.1" 200 -
+2024-12-27 18:25:42,362 - asyncio - DEBUG - Using selector: KqueueSelector
+2024-12-27 18:25:42,412 - __main__ - INFO - File saved to: /Users/nileshhanotia/Projects/financial_analysis/temp/temp_20241227_182542_482822_VIRRE_27169236_12-2020_1.pdf
+2024-12-27 18:25:42,412 - __main__ - INFO - Starting document analysis...
+2024-12-27 18:25:42,571 - document_processor - INFO - Converted text to markdown format
+2024-12-27 18:25:43,297 - document_processor - INFO - Detected language: fi
+2024-12-27 18:25:43,647 - httpcore.connection - DEBUG - connect_tcp.started host='api.groq.com' port=443 local_address=None timeout=5.0 socket_options=None
+2024-12-27 18:25:43,690 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x110165550>
+2024-12-27 18:25:43,690 - httpcore.connection - DEBUG - start_tls.started ssl_context=<ssl.SSLContext object at 0x1100e6720> server_hostname='api.groq.com' timeout=5.0
+2024-12-27 18:25:43,717 - httpcore.connection - DEBUG - start_tls.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x11006bd90>
+2024-12-27 18:25:43,718 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2024-12-27 18:25:43,721 - httpcore.http11 - DEBUG - send_request_headers.complete
+2024-12-27 18:25:43,723 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2024-12-27 18:25:43,724 - httpcore.http11 - DEBUG - send_request_body.complete
+2024-12-27 18:25:43,724 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2024-12-27 18:25:44,704 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Date', b'Fri, 27 Dec 2024 12:55:44 GMT'), (b'Content-Type', b'application/json'), (b'Transfer-Encoding', b'chunked'), (b'Connection', b'keep-alive'), (b'CF-Ray', b'8f897772acdf3de0-BOM'), (b'CF-Cache-Status', b'DYNAMIC'), (b'Cache-Control', b'private, max-age=0, no-store, no-cache, must-revalidate'), (b'Vary', b'Origin, Accept-Encoding'), (b'Via', b'1.1 google'), (b'alt-svc', b'h3=":443"; ma=86400'), (b'x-groq-region', b'us-west-1'), (b'x-ratelimit-limit-requests', b'14400'), (b'x-ratelimit-limit-tokens', b'30000'), (b'x-ratelimit-remaining-requests', b'14399'), (b'x-ratelimit-remaining-tokens', b'27648'), (b'x-ratelimit-reset-requests', b'6s'), (b'x-ratelimit-reset-tokens', b'4.704s'), (b'x-request-id', b'req_01jg42zs2kfjz9fcphemzk1w56'), (b'Set-Cookie', b'__cf_bm=onNj.WaYhYKFilgMLxVpqWygYnplHEHty9YtPY2r24M-1735304144-1.0.1.1-aRwA.1AR3.YzWCfeWgHzMoiB6pu7vr9o41FIAFN0mRCpU6Wm4apWsbgy_h5vgIQpb32LYEqwqedY85EAN2oTRw; path=/; expires=Fri, 27-Dec-24 13:25:44 GMT; domain=.groq.com; HttpOnly; Secure; SameSite=None'), (b'Server', b'cloudflare'), (b'Content-Encoding', b'gzip')])
+2024-12-27 18:25:44,705 - httpx - INFO - HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2024-12-27 18:25:44,706 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'POST']>
+2024-12-27 18:25:44,706 - httpcore.http11 - DEBUG - receive_response_body.complete
+2024-12-27 18:25:44,707 - httpcore.http11 - DEBUG - response_closed.started
+2024-12-27 18:25:44,707 - httpcore.http11 - DEBUG - response_closed.complete
+2024-12-27 18:25:44,708 - httpcore.connection - DEBUG - close.started
+2024-12-27 18:25:44,708 - httpcore.connection - DEBUG - close.complete
+2024-12-27 18:25:44,715 - werkzeug - INFO - 127.0.0.1 - - [27/Dec/2024 18:25:44] "POST /analyze HTTP/1.1" 200 -
+2024-12-27 18:30:03,354 - werkzeug - INFO - 127.0.0.1 - - [27/Dec/2024 18:30:03] "GET / HTTP/1.1" 200 -
+2024-12-27 18:30:11,214 - asyncio - DEBUG - Using selector: KqueueSelector
+2024-12-27 18:30:11,250 - __main__ - INFO - File saved to: /Users/nileshhanotia/Projects/financial_analysis/temp/temp_20241227_183011_102096_Norway_990646066_2015_2.pdf
+2024-12-27 18:30:11,251 - __main__ - INFO - Starting document analysis...
+2024-12-27 18:30:11,391 - document_processor - INFO - Converted text to markdown format
+2024-12-27 18:30:11,451 - document_processor - INFO - Detected language: no
+2024-12-27 18:30:11,568 - httpcore.connection - DEBUG - connect_tcp.started host='api.groq.com' port=443 local_address=None timeout=5.0 socket_options=None
+2024-12-27 18:30:11,608 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x11015d950>
+2024-12-27 18:30:11,608 - httpcore.connection - DEBUG - start_tls.started ssl_context=<ssl.SSLContext object at 0x1100e6e70> server_hostname='api.groq.com' timeout=5.0
+2024-12-27 18:30:11,635 - httpcore.connection - DEBUG - start_tls.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x1100fb950>
+2024-12-27 18:30:11,636 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2024-12-27 18:30:11,638 - httpcore.http11 - DEBUG - send_request_headers.complete
+2024-12-27 18:30:11,638 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2024-12-27 18:30:11,639 - httpcore.http11 - DEBUG - send_request_body.complete
+2024-12-27 18:30:11,639 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2024-12-27 18:30:12,614 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Date', b'Fri, 27 Dec 2024 13:00:12 GMT'), (b'Content-Type', b'application/json'), (b'Transfer-Encoding', b'chunked'), (b'Connection', b'keep-alive'), (b'CF-Ray', b'8f897dfd3e7847b8-BOM'), (b'CF-Cache-Status', b'DYNAMIC'), (b'Cache-Control', b'private, max-age=0, no-store, no-cache, must-revalidate'), (b'Vary', b'Origin, Accept-Encoding'), (b'Via', b'1.1 google'), (b'alt-svc', b'h3=":443"; ma=86400'), (b'x-groq-region', b'us-west-1'), (b'x-ratelimit-limit-requests', b'14400'), (b'x-ratelimit-limit-tokens', b'30000'), (b'x-ratelimit-remaining-requests', b'14399'), (b'x-ratelimit-remaining-tokens', b'27559'), (b'x-ratelimit-reset-requests', b'6s'), (b'x-ratelimit-reset-tokens', b'4.882s'), (b'x-request-id', b'req_01jg437ypkea1b8rpz7psnd4m5'), (b'Set-Cookie', b'__cf_bm=vhL8MliljHX6CEsvfohR4vgvht545tMYXg2_W1ursyE-1735304412-1.0.1.1-H4gyWIWOwkzR6nWzsKFskkD13hlehUJ3iwup5aCC5GmOGAyXo517L2kjQ0ROiklbgXARNksLLAih7fjY6kbKOA; path=/; expires=Fri, 27-Dec-24 13:30:12 GMT; domain=.groq.com; HttpOnly; Secure; SameSite=None'), (b'Server', b'cloudflare'), (b'Content-Encoding', b'gzip')])
+2024-12-27 18:30:12,617 - httpx - INFO - HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2024-12-27 18:30:12,618 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'POST']>
+2024-12-27 18:30:12,619 - httpcore.http11 - DEBUG - receive_response_body.complete
+2024-12-27 18:30:12,621 - httpcore.http11 - DEBUG - response_closed.started
+2024-12-27 18:30:12,622 - httpcore.http11 - DEBUG - response_closed.complete
+2024-12-27 18:30:12,623 - httpcore.connection - DEBUG - close.started
+2024-12-27 18:30:12,624 - httpcore.connection - DEBUG - close.complete
+2024-12-27 18:30:12,633 - werkzeug - INFO - 127.0.0.1 - - [27/Dec/2024 18:30:12] "POST /analyze HTTP/1.1" 200 -
+2024-12-27 18:37:58,727 - pdf_converter - INFO - PyMuPDF (fitz) is available
+2024-12-27 18:37:58,916 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.29.222:5000
+2024-12-27 18:37:58,916 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2024-12-27 18:38:02,515 - werkzeug - INFO - 127.0.0.1 - - [27/Dec/2024 18:38:02] "GET / HTTP/1.1" 200 -
+2024-12-27 18:38:08,753 - asyncio - DEBUG - Using selector: KqueueSelector
+2024-12-27 18:38:08,760 - __main__ - INFO - File saved to: /Users/nileshhanotia/Projects/financial_analysis/temp/temp_20241227_183808_517056_KVK_09107788_12-2019_2.pdf
+2024-12-27 18:38:08,765 - __main__ - INFO - Starting document analysis...
+2024-12-27 18:38:08,920 - document_processor - INFO - Converted text to markdown format
+2024-12-27 18:38:09,654 - document_processor - INFO - Detected language: nl
+2024-12-27 18:38:10,040 - httpcore.connection - DEBUG - connect_tcp.started host='api.groq.com' port=443 local_address=None timeout=5.0 socket_options=None
+2024-12-27 18:38:10,080 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x113e49550>
+2024-12-27 18:38:10,081 - httpcore.connection - DEBUG - start_tls.started ssl_context=<ssl.SSLContext object at 0x113dd2720> server_hostname='api.groq.com' timeout=5.0
+2024-12-27 18:38:10,106 - httpcore.connection - DEBUG - start_tls.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x113d5fc50>
+2024-12-27 18:38:10,107 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2024-12-27 18:38:10,108 - httpcore.http11 - DEBUG - send_request_headers.complete
+2024-12-27 18:38:10,109 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2024-12-27 18:38:10,109 - httpcore.http11 - DEBUG - send_request_body.complete
+2024-12-27 18:38:10,110 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2024-12-27 18:38:10,793 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Date', b'Fri, 27 Dec 2024 13:08:10 GMT'), (b'Content-Type', b'application/json'), (b'Transfer-Encoding', b'chunked'), (b'Connection', b'keep-alive'), (b'CF-Ray', b'8f8989ab7f831bd7-BOM'), (b'CF-Cache-Status', b'DYNAMIC'), (b'Cache-Control', b'private, max-age=0, no-store, no-cache, must-revalidate'), (b'Vary', b'Origin, Accept-Encoding'), (b'Via', b'1.1 google'), (b'alt-svc', b'h3=":443"; ma=86400'), (b'x-groq-region', b'us-west-1'), (b'x-ratelimit-limit-requests', b'14400'), (b'x-ratelimit-limit-tokens', b'30000'), (b'x-ratelimit-remaining-requests', b'14399'), (b'x-ratelimit-remaining-tokens', b'28812'), (b'x-ratelimit-reset-requests', b'6s'), (b'x-ratelimit-reset-tokens', b'2.376s'), (b'x-request-id', b'req_01jg43phy4fj5ra8tef1c6gcr5'), (b'Set-Cookie', b'__cf_bm=DnY02dQfYnine3oQrr1CfkaIr2w7ibfmXGDMBvsfi_Q-1735304890-1.0.1.1-AyxIWQz5k18SCENqf3NhTJ8RiFoJOqsfjwgGbj4T_FV3ri_yZ1g.v5q0GDDFAJXF9avaxkqSJ9.aKiB2O7Jchg; path=/; expires=Fri, 27-Dec-24 13:38:10 GMT; domain=.groq.com; HttpOnly; Secure; SameSite=None'), (b'Server', b'cloudflare'), (b'Content-Encoding', b'gzip')])
+2024-12-27 18:38:10,799 - httpx - INFO - HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2024-12-27 18:38:10,805 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'POST']>
+2024-12-27 18:38:10,806 - httpcore.http11 - DEBUG - receive_response_body.complete
+2024-12-27 18:38:10,806 - httpcore.http11 - DEBUG - response_closed.started
+2024-12-27 18:38:10,807 - httpcore.http11 - DEBUG - response_closed.complete
+2024-12-27 18:38:10,807 - httpcore.connection - DEBUG - close.started
+2024-12-27 18:38:10,809 - httpcore.connection - DEBUG - close.complete
+2024-12-27 18:38:10,815 - werkzeug - INFO - 127.0.0.1 - - [27/Dec/2024 18:38:10] "POST /analyze HTTP/1.1" 200 -
+2024-12-27 18:38:52,951 - asyncio - DEBUG - Using selector: KqueueSelector
+2024-12-27 18:38:52,978 - __main__ - INFO - File saved to: /Users/nileshhanotia/Projects/financial_analysis/temp/temp_20241227_183852_482822_VIRRE_27169236_12-2020.pdf
+2024-12-27 18:38:52,978 - __main__ - INFO - Starting document analysis...
+2024-12-27 18:38:53,045 - document_processor - INFO - Converted text to markdown format
+2024-12-27 18:38:53,061 - document_processor - INFO - Detected language: fi
+2024-12-27 18:38:53,132 - httpcore.connection - DEBUG - connect_tcp.started host='api.groq.com' port=443 local_address=None timeout=5.0 socket_options=None
+2024-12-27 18:38:53,166 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x113e4e210>
+2024-12-27 18:38:53,167 - httpcore.connection - DEBUG - start_tls.started ssl_context=<ssl.SSLContext object at 0x113dd2e70> server_hostname='api.groq.com' timeout=5.0
+2024-12-27 18:38:53,190 - httpcore.connection - DEBUG - start_tls.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x113de6d70>
+2024-12-27 18:38:53,191 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2024-12-27 18:38:53,192 - httpcore.http11 - DEBUG - send_request_headers.complete
+2024-12-27 18:38:53,193 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2024-12-27 18:38:53,193 - httpcore.http11 - DEBUG - send_request_body.complete
+2024-12-27 18:38:53,193 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2024-12-27 18:38:54,069 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Date', b'Fri, 27 Dec 2024 13:08:54 GMT'), (b'Content-Type', b'application/json'), (b'Transfer-Encoding', b'chunked'), (b'Connection', b'keep-alive'), (b'CF-Ray', b'8f898ab8cf1b484d-BOM'), (b'CF-Cache-Status', b'DYNAMIC'), (b'Cache-Control', b'private, max-age=0, no-store, no-cache, must-revalidate'), (b'Vary', b'Origin, Accept-Encoding'), (b'Via', b'1.1 google'), (b'alt-svc', b'h3=":443"; ma=86400'), (b'x-groq-region', b'us-west-1'), (b'x-ratelimit-limit-requests', b'14400'), (b'x-ratelimit-limit-tokens', b'30000'), (b'x-ratelimit-remaining-requests', b'14399'), (b'x-ratelimit-remaining-tokens', b'28329'), (b'x-ratelimit-reset-requests', b'6s'), (b'x-ratelimit-reset-tokens', b'3.342s'), (b'x-request-id', b'req_01jg43qw0cfc8v45vt8w2eq88h'), (b'Set-Cookie', b'__cf_bm=oQDlMZECyLA.jH4adqY.Pg_6o2740VFPfCh6DjGTlvw-1735304934-1.0.1.1-.xdnKI2D7C0tui4mPXXaP8sz5H.qwApZlJLH2Lwe_N2LxNJ_UBvWOqLwmn51xP4k7kE9fRj_in1CtdrZckKmUw; path=/; expires=Fri, 27-Dec-24 13:38:54 GMT; domain=.groq.com; HttpOnly; Secure; SameSite=None'), (b'Server', b'cloudflare'), (b'Content-Encoding', b'gzip')])
+2024-12-27 18:38:54,070 - httpx - INFO - HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2024-12-27 18:38:54,071 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'POST']>
+2024-12-27 18:38:54,072 - httpcore.http11 - DEBUG - receive_response_body.complete
+2024-12-27 18:38:54,072 - httpcore.http11 - DEBUG - response_closed.started
+2024-12-27 18:38:54,073 - httpcore.http11 - DEBUG - response_closed.complete
+2024-12-27 18:38:54,077 - httpcore.connection - DEBUG - close.started
+2024-12-27 18:38:54,078 - httpcore.connection - DEBUG - close.complete
+2024-12-27 18:38:54,081 - werkzeug - INFO - 127.0.0.1 - - [27/Dec/2024 18:38:54] "POST /analyze HTTP/1.1" 200 -
+2024-12-27 18:39:06,842 - asyncio - DEBUG - Using selector: KqueueSelector
+2024-12-27 18:39:06,868 - __main__ - INFO - File saved to: /Users/nileshhanotia/Projects/financial_analysis/temp/temp_20241227_183906_528877_Japan_3010401095635_03-2019_3.pdf
+2024-12-27 18:39:06,868 - __main__ - INFO - Starting document analysis...
+2024-12-27 18:39:07,743 - document_processor - INFO - Converted text to markdown format
+2024-12-27 18:39:07,798 - document_processor - INFO - Detected language: ja
+2024-12-27 18:39:07,891 - httpcore.connection - DEBUG - connect_tcp.started host='api.groq.com' port=443 local_address=None timeout=5.0 socket_options=None
+2024-12-27 18:39:07,911 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x113de6650>
+2024-12-27 18:39:07,912 - httpcore.connection - DEBUG - start_tls.started ssl_context=<ssl.SSLContext object at 0x113dd3920> server_hostname='api.groq.com' timeout=5.0
+2024-12-27 18:39:07,961 - httpcore.connection - DEBUG - start_tls.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x113df7ad0>
+2024-12-27 18:39:07,962 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2024-12-27 18:39:07,963 - httpcore.http11 - DEBUG - send_request_headers.complete
+2024-12-27 18:39:07,963 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2024-12-27 18:39:07,964 - httpcore.http11 - DEBUG - send_request_body.complete
+2024-12-27 18:39:07,965 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2024-12-27 18:39:08,886 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Date', b'Fri, 27 Dec 2024 13:09:08 GMT'), (b'Content-Type', b'application/json'), (b'Transfer-Encoding', b'chunked'), (b'Connection', b'keep-alive'), (b'CF-Ray', b'8f898b151a0d3a8d-BOM'), (b'CF-Cache-Status', b'DYNAMIC'), (b'Cache-Control', b'private, max-age=0, no-store, no-cache, must-revalidate'), (b'Vary', b'Origin, Accept-Encoding'), (b'Via', b'1.1 google'), (b'alt-svc', b'h3=":443"; ma=86400'), (b'x-groq-region', b'us-west-1'), (b'x-ratelimit-limit-requests', b'14400'), (b'x-ratelimit-limit-tokens', b'30000'), (b'x-ratelimit-remaining-requests', b'14399'), (b'x-ratelimit-remaining-tokens', b'26459'), (b'x-ratelimit-reset-requests', b'6s'), (b'x-ratelimit-reset-tokens', b'7.082s'), (b'x-request-id', b'req_01jg43rae6emd8bttj1h8m4kpg'), (b'Set-Cookie', b'__cf_bm=cQsQWiMR3VdNJd6HUrxRCwFcs3vkcZYm8p7QkH5k8dY-1735304948-1.0.1.1-QbPwtrQQgLIM6ZNBX6fbJ9XZhmmWQg_XOoGSOrWT3qdNx7Ouud1vXYFHD7QBr1N2oUf2jMDgzQWxhrEf79gU5A; path=/; expires=Fri, 27-Dec-24 13:39:08 GMT; domain=.groq.com; HttpOnly; Secure; SameSite=None'), (b'Server', b'cloudflare'), (b'Content-Encoding', b'gzip')])
+2024-12-27 18:39:08,887 - httpx - INFO - HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2024-12-27 18:39:08,887 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'POST']>
+2024-12-27 18:39:08,889 - httpcore.http11 - DEBUG - receive_response_body.complete
+2024-12-27 18:39:08,889 - httpcore.http11 - DEBUG - response_closed.started
+2024-12-27 18:39:08,889 - httpcore.http11 - DEBUG - response_closed.complete
+2024-12-27 18:39:08,890 - httpcore.connection - DEBUG - close.started
+2024-12-27 18:39:08,891 - httpcore.connection - DEBUG - close.complete
+2024-12-27 18:39:08,902 - werkzeug - INFO - 127.0.0.1 - - [27/Dec/2024 18:39:08] "POST /analyze HTTP/1.1" 200 -

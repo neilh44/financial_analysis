@@ -1,71 +1,103 @@
-# financial_analyzer.py
-
-from typing import Dict, Any, Optional
-from dataclasses import dataclass
-import json
+import google.generativeai as genai
 import logging
-import time
-from groq import Groq
-from document_processor import DocumentProcessor, TextAnalyzer
-
-# Configure logging
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+from typing import Dict, Any, Optional
+import json
+from dataclasses import dataclass
+from typing import List
 
 @dataclass
-class FinancialMetrics:
-    """Data class to hold financial metrics"""
-    revenue: Optional[float] = None
-    ebit: Optional[float] = None
-    ebitda: Optional[float] = None
-    net_income: Optional[float] = None
-    employees: Optional[int] = None
-    depreciation: Optional[float] = None
-    amortization: Optional[float] = None
-    currency: str = "EUR"
-    units: str = "actuals"
-    confidence_score: float = 0.0
+class CurrencyInfo:
+    code: str
+    unit: str
+    year: str
+
+logger = logging.getLogger(__name__)
+
+class CurrencyHandler:
+    """Handle currency detection and validation"""
+    
+    KNOWN_CURRENCIES = {
+        'EUR': {'symbols': ['€', 'EUR', 'euro', 'euros']},
+        'USD': {'symbols': ['$', 'USD', 'dollar', 'dollars']},
+        'GBP': {'symbols': ['£', 'GBP', 'pound', 'pounds']},
+        'CNY': {'symbols': ['¥', 'CNY', 'yuan']},
+        'JPY': {'symbols': ['¥', 'JPY', 'yen']},
+        'RUB': {'symbols': ['₽', 'RUB', 'ruble', 'rubles']},
+        'SEK': {'symbols': ['kr', 'SEK', 'krona', 'kronor']},
+    }
+    
+    KNOWN_UNITS = ['thousands', 'millions', 'billions', 'M', 'B', 'K', 'Thousand', 'Million', 'Billion']
+    
+    @classmethod
+    def detect_currency(cls, text: str, year: str) -> Optional[CurrencyInfo]:
+        """Detect currency and unit from text for a specific year"""
+        # Special case for Latvia as per SOP section 9
+        if "Latvia" in text and int(year) >= 2014:
+            return CurrencyInfo(code='EUR', unit='actuals', year=year)
+            
+        # Look for currency symbols and codes
+        detected_currency = None
+        for curr_code, curr_info in cls.KNOWN_CURRENCIES.items():
+            if any(symbol.lower() in text.lower() for symbol in curr_info['symbols']):
+                detected_currency = curr_code
+                break
+                
+        # Look for units
+        detected_unit = 'actuals'  # default
+        for unit in cls.KNOWN_UNITS:
+            if unit.lower() in text.lower():
+                # Special case for Colombian companies as per SOP section 8
+                if unit == 'M' and 'Colombian' in text:
+                    detected_unit = 'thousands'
+                else:
+                    detected_unit = unit.lower()
+                break
+                
+        if detected_currency:
+            return CurrencyInfo(
+                code=detected_currency,
+                unit=detected_unit,
+                year=year
+            )
+        return None
+
+    @staticmethod
+    def validate_currency(currency_info: CurrencyInfo) -> bool:
+        """Validate currency information as per Hard Stops"""
+        if not currency_info:
+            return False
+        return all([
+            currency_info.code is not None,
+            currency_info.code in CurrencyHandler.KNOWN_CURRENCIES,
+            currency_info.unit is not None,
+            currency_info.year is not None
+        ])
 
 class FinancialAnalyzer:
-    """Financial document analysis using LLM"""
+    """Financial document analysis using only Gemini with enhanced extraction"""
     
-    def __init__(self, groq_api_key: str):
-        self.groq_client = Groq(api_key=groq_api_key)
-        self.document_processor = DocumentProcessor()
-        self.validation_rules = {
-            'min_revenue': 0,
-            'min_confidence': 70,
-            'required_fields': ['revenue', 'ebit', 'net_income'],
-            'retry_attempts': 3,
-            'retry_delay': 1
-        }
+    def __init__(self, gemini_api_key: str):
+        if not gemini_api_key:
+            raise ValueError("Gemini API key is required")
+            
+        genai.configure(api_key=gemini_api_key)
+        self.model = genai.GenerativeModel('gemini-pro')
+        self.currency_handler = CurrencyHandler()
 
-    def analyze_document(self, file_path: str) -> Dict[str, Any]:
+    async def analyze_document(self, text: str, year: str = None) -> Dict[str, Any]:
         """Main method to analyze a financial document"""
         try:
-            # Process document
-            doc_result = self.document_processor.process_document(file_path)
-            if not doc_result['success']:
-                return {
-                    'error': doc_result.get('error', 'Document processing failed'),
-                    'success': False
-                }
+            # Extract and analyze in a single step
+            results = await self._extract_and_analyze(text, year)
+            if not results['success']:
+                return results
 
-            # Analyze text
-            results = self.analyze_with_llm(doc_result['text'], doc_result['language'])
-            
-            # Add metadata
-            results['language'] = doc_result['language']
-            results['validations'] = self.validate_financial_data(results)
-            results['accuracy'] = self._calculate_accuracy(results)
-            
-            return {
-                'success': True,
-                'data': results
-            }
+            # Validate results
+            validation = self.validate_financial_data(results['data'])
+            results['validation'] = validation
+            results['accuracy_score'] = self._calculate_accuracy(results['data'])
+
+            return results
 
         except Exception as e:
             logger.error(f"Analysis error: {str(e)}")
@@ -74,292 +106,177 @@ class FinancialAnalyzer:
                 'success': False
             }
 
-    def _clean_json_response(self, response: str) -> str:
-        """Clean and validate JSON response"""
+    async def _extract_and_analyze(self, text: str, year: str = None) -> Dict[str, Any]:
+        """Extract metrics and perform analysis using Gemini"""
         try:
-            # Find first { and last }
-            start = response.find('{')
-            end = response.rfind('}')
+            # Detect currency information
+            currency_info = self.currency_handler.detect_currency(text, year or "2024")
             
-            if start != -1 and end != -1:
-                potential_json = response[start:end + 1]
-                # Validate it's parseable
-                json.loads(potential_json)
-                return potential_json
-            
-            raise ValueError("No valid JSON object found in response")
-        except Exception as e:
-            logger.error(f"Error cleaning JSON response: {e}")
-            raise
+            prompt = f"""
+You are a financial expert analyzing a financial document. Extract and calculate key metrics according to these guidelines:
 
-    def analyze_with_llm(self, text: str, language: str) -> Dict[str, Any]:
-        """Use LLM for financial analysis with retries"""
-        retry_count = 0
-        
-        while retry_count < self.validation_rules['retry_attempts']:
-            try:
-                prompt = self._create_analysis_prompt(text, language)
-                response = self._make_llm_request(prompt)
-                
-                # Clean and parse response
-                cleaned_response = self._clean_json_response(response)
-                result = self._parse_llm_response(cleaned_response)
-                
-                if self._validate_llm_result(result):
-                    return result
-                
-            except Exception as e:
-                logger.error(f"LLM analysis error (attempt {retry_count + 1}): {e}")
-            
-            retry_count += 1
-            if retry_count < self.validation_rules['retry_attempts']:
-                time.sleep(self.validation_rules['retry_delay'])
-        
-        return self._create_empty_result()
+1. Extract these metrics (use null if not found):
+   - Revenue (Liikevaihto/Omsättning/Sales/Turnover)
+   - EBIT (Operating Profit/Liikevoitto/Rörelseresultat)
+   - Net Income (Tilikauden tulos/Årets resultat/Profit after tax)
+   - Depreciation (Poistot/Avskrivningar)
+   - Amortization
+   - Number of Employees (Henkilöstö/Personal)
 
-    def _create_analysis_prompt(self, text: str, language: str) -> str:
-        """Create analysis prompt for LLM"""
-        return f"""
-You are a multilingual financial expert. Analyze this financial document and return ONLY a valid JSON object.
+2. Special cases:
+   - For banks/financial institutions: Revenue = Net Interest Income + Fees + Trading Income
+   - For insurance companies: Revenue = Net Earned Premium + Reinsurance Revenue
+   - EBIT calculation if not directly provided: Profit Before Tax + Interest Expense - Interest Income
+   - EBITDA = EBIT + Depreciation + Amortization
 
-Find these values in the {language} text:
-1. REVENUE (Sales/Turnover)
-2. EBIT (Operating Result)
-3. EBITDA (EBIT + Depreciation + Amortization)
-4. NET INCOME (Final profit/loss)
-5. DEPRECIATION
-6. AMORTIZATION
-7. EMPLOYEE COUNT
+3. Calculate additional metrics:
+   - EBITDA margin
+   - Net profit margin
+   - Operating margin
+   - Financial health score (0-100)
 
-FORMAT YOUR RESPONSE EXACTLY LIKE THIS, replacing values with NULL if not found:
-{{
-    "revenue": 1000000,
-    "ebit": -50000,
-    "ebitda": -45000,
-    "net_income": -55000,
-    "depreciation": 5000,
-    "amortization": null,
-    "employees": 100,
-    "currency": "EUR",
-    "units": "actuals",
-    "confidence_score": 90
-}}
+Currency Information:
+- Detected Currency: {currency_info.code if currency_info else 'Unknown'}
+- Detected Unit: {currency_info.unit if currency_info else 'Unknown'}
+- Year: {currency_info.year if currency_info else 'Unknown'}
 
-CRITICAL RULES:
-1. Response MUST be a valid JSON object
-2. Respond with ONLY the JSON object, no other text
-3. Use exact numbers found in document
-4. Keep negative signs (-)
-5. Use null for missing values
-6. Units must be one of: "millions", "thousands", "actuals"
-
-Input text:
+Input Text:
 {text}
-"""
 
-    def _make_llm_request(self, prompt: str) -> str:
-        """Make request to LLM API"""
-        completion = self.groq_client.chat.completions.create(
-            model="llama3-8b-8192",
-            messages=[
-                {"role": "system", "content": "You are a multilingual financial expert. Respond only with valid JSON."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.1,
-            max_tokens=1000
-        )
-        return completion.choices[0].message.content.strip()
+Return a JSON object in this exact format (replace null with null value and number with actual numbers):
 
-    def _parse_llm_response(self, response: str) -> Dict[str, Any]:
-        """Parse and normalize LLM response"""
-        result = json.loads(response)
-        
-        # Normalize all numerical values
-        for key in ['revenue', 'ebit', 'ebitda', 'net_income', 'depreciation', 'amortization']:
-            result[key] = TextAnalyzer.normalize_number(result.get(key))
-        
-        # Handle employees separately
-        if result.get('employees') is not None:
-            try:
-                result['employees'] = int(TextAnalyzer.normalize_number(result['employees']))
-            except (TypeError, ValueError):
-                result['employees'] = None
-        
-        return result
+{
+    "metrics": {
+        "revenue": "number or null",
+        "ebit": "number or null",
+        "ebitda": "number or null",
+        "net_income": "number or null",
+        "depreciation": "number or null",
+        "amortization": "number or null",
+        "employees": "number or null"
+    },
+    "calculated_metrics": {
+        "ebitda_margin": "number or null",
+        "net_profit_margin": "number or null",
+        "operating_margin": "number or null"
+    },
+    "analysis": {
+        "currency": "detected_currency_code",
+        "financial_health_score": "number",
+        "confidence_score": "number",
+        "company_type": "company_type_string",
+        "data_completeness": "number"
+    },
+    "warnings": []
+}"""
 
-    def _validate_llm_result(self, result: Dict[str, Any]) -> bool:
-        """Validate LLM result"""
-        try:
-            # Check required fields
-            required_fields = ['revenue', 'ebit', 'net_income', 'currency', 'units', 'confidence_score']
-            if not all(key in result for key in required_fields):
-                return False
-                
-            # Validate currency
-            if not isinstance(result.get('currency'), str):
-                return False
-                
-            # Validate units
-            if result.get('units', '').lower() not in ['millions', 'thousands', 'actuals']:
-                return False
-                
-            # Validate confidence score
-            confidence = result.get('confidence_score')
-            if not isinstance(confidence, (int, float)) or not 0 <= confidence <= 100:
-                return False
-                
-            return True
+            safety_settings = [
+                {
+                    "category": "HARM_CATEGORY_DANGEROUS",
+                    "threshold": "BLOCK_NONE",
+                }
+            ]
             
-        except Exception as e:
-            logger.error(f"Error validating LLM result: {e}")
-            return False
+            response = self.model.generate_content(
+                prompt,
+                safety_settings=safety_settings,
+                generation_config={
+                    "temperature": 0.1,
+                    "top_p": 1,
+                    "top_k": 1,
+                    "max_output_tokens": 2048,
+                }
+            )
 
-    def _create_empty_result(self) -> Dict[str, Any]:
-        """Create empty result structure"""
-        return FinancialMetrics().__dict__
+            if not response or not response.text:
+                return {
+                    'success': False,
+                    'error': 'No response from Gemini'
+                }
+
+            try:
+                # Clean the response text to ensure it contains only the JSON part
+                response_text = response.text.strip()
+                json_start = response_text.find('{')
+                json_end = response_text.rfind('}') + 1
+                if json_start >= 0 and json_end > json_start:
+                    json_str = response_text[json_start:json_end]
+                    data = json.loads(json_str)
+                    
+                    # Validate the response structure
+                    required_keys = ['metrics', 'calculated_metrics', 'analysis']
+                    if not all(key in data for key in required_keys):
+                        return {
+                            'success': False,
+                            'error': 'Invalid response structure: missing required keys'
+                        }
+                    
+                    return {
+                        'success': True,
+                        'data': data
+                    }
+                else:
+                    return {
+                        'success': False,
+                        'error': 'No valid JSON object found in response'
+                    }
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON parsing error: {str(e)}")
+                return {
+                    'success': False,
+                    'error': f'Invalid JSON response from Gemini: {str(e)}'
+                }
+            except Exception as e:
+                logger.error(f"Unexpected error processing response: {str(e)}")
+                return {
+                    'success': False,
+                    'error': f'Error processing response: {str(e)}'
+                }
+
+        except Exception as e:
+            logger.error(f"Extraction error: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
 
     def validate_financial_data(self, data: Dict[str, Any]) -> Dict[str, bool]:
-        """Validate extracted financial data with null checks"""
-        revenue = data.get('revenue')
+        """Validate extracted financial data"""
+        metrics = data.get('metrics', {})
+        calculated = data.get('calculated_metrics', {})
+        analysis = data.get('analysis', {})
+        
         return {
-            'has_revenue': bool(revenue and revenue > self.validation_rules['min_revenue']),
-            'has_required_metrics': all(data.get(key) is not None for key in self.validation_rules['required_fields']),
-            'confidence_sufficient': bool(data.get('confidence_score', 0) >= self.validation_rules['min_confidence']),
-            'values_consistent': self._check_value_consistency(data),
-            'ebitda_consistent': self._check_ebitda_consistency(data)
+            'has_core_metrics': all(metrics.get(key) is not None for key in ['revenue', 'net_income']),
+            'has_operational_metrics': all(metrics.get(key) is not None for key in ['ebit', 'ebitda']),
+            'has_calculated_ratios': all(calculated.get(key) is not None for key in ['ebitda_margin', 'net_profit_margin']),
+            'has_valid_scores': all(0 <= analysis.get(key, -1) <= 100 for key in ['financial_health_score', 'confidence_score'])
         }
 
-    def _check_value_consistency(self, data: Dict[str, Any]) -> bool:
-            """Check if financial values are logically consistent"""
-            try:
-                revenue = data.get('revenue')
-                ebit = data.get('ebit')
-                net_income = data.get('net_income')
-                ebitda = data.get('ebitda')
-                depreciation = data.get('depreciation')
-                amortization = data.get('amortization')
-                
-                # Only check relationships when both values are present
-                if revenue is not None and ebit is not None:
-                    # EBIT should not be greater than revenue (in most normal cases)
-                    if ebit > revenue:
-                        logger.warning("EBIT greater than revenue")
-                        return False
-                
-                if ebit is not None and net_income is not None:
-                    # Net income should not be greater than EBIT (in most normal cases)
-                    if net_income > ebit:
-                        logger.warning("Net income greater than EBIT")
-                        return False
-                
-                if ebitda is not None and ebit is not None:
-                    # EBITDA should be greater than or equal to EBIT
-                    # (since we add back depreciation and amortization)
-                    if ebitda < ebit:
-                        logger.warning("EBITDA less than EBIT")
-                        return False
-                
-                # Check if EBITDA calculation is consistent when all components are present
-                if all(v is not None for v in [ebit, depreciation, amortization, ebitda]):
-                    calculated_ebitda = ebit + depreciation + amortization
-                    # Allow for small rounding differences (0.1% tolerance)
-                    if abs(calculated_ebitda - ebitda) > abs(ebitda * 0.001):
-                        logger.warning(f"EBITDA calculation inconsistent: calculated={calculated_ebitda}, reported={ebitda}")
-                        return False
-                
-                # Check for logical sign consistency
-                if revenue is not None and net_income is not None:
-                    if revenue > 0 and net_income > revenue:
-                        logger.warning("Net income greater than positive revenue")
-                        return False
-                    if revenue < 0 and net_income > 0:
-                        logger.warning("Positive net income with negative revenue")
-                        return False
-                
-                # Check for reasonable depreciation/amortization values
-                if revenue is not None and depreciation is not None:
-                    if depreciation > revenue:
-                        logger.warning("Depreciation greater than revenue")
-                        return False
-                
-                if revenue is not None and amortization is not None:
-                    if amortization > revenue:
-                        logger.warning("Amortization greater than revenue")
-                        return False
-                
-                return True
-                
-            except Exception as e:
-                logger.error(f"Error in value consistency check: {e}")
-                return False
-
-    def _check_ebitda_consistency(self, data: Dict[str, Any]) -> bool:
-                """Check EBITDA consistency with components"""
-                try:
-                    # Get all components needed for EBITDA calculation
-                    ebit = data.get('ebit')
-                    depreciation = data.get('depreciation')
-                    amortization = data.get('amortization')
-                    reported_ebitda = data.get('ebitda')
-                    
-                    # Only check if we have all components and reported EBITDA
-                    if all(v is not None for v in [ebit, depreciation, amortization, reported_ebitda]):
-                        calculated_ebitda = ebit + depreciation + amortization
-                        
-                        # Allow for small rounding differences (0.1% tolerance)
-                        tolerance = abs(reported_ebitda * 0.001)
-                        if abs(calculated_ebitda - reported_ebitda) <= tolerance:
-                            return True
-                        else:
-                            logger.warning(
-                                f"EBITDA inconsistency - Calculated: {calculated_ebitda}, "
-                                f"Reported: {reported_ebitda}, "
-                                f"Difference: {abs(calculated_ebitda - reported_ebitda)}"
-                            )
-                            return False
-                    
-                    # If we don't have all components, consider it consistent
-                    # (we can't verify what we don't have)
-                    return True
-                    
-                except Exception as e:
-                    logger.error(f"Error in EBITDA consistency check: {e}")
-                    return False        
-                
-
     def _calculate_accuracy(self, data: Dict[str, Any]) -> float:
-        """Calculate overall accuracy score based on validations and confidence"""
+        """Calculate accuracy score based on data completeness and validity"""
         try:
-            # Get validation results
-            validations = self.validate_financial_data(data)
+            metrics = data.get('metrics', {})
+            calculated = data.get('calculated_metrics', {})
             
-            # Define weights for different components
+            # Weight different components
             weights = {
-                'has_revenue': 0.2,
-                'has_required_metrics': 0.3,
-                'values_consistent': 0.25,
-                'ebitda_consistent': 0.15,
-                'confidence': 0.1
+                'core_metrics': 0.4,  # revenue, net_income
+                'operational_metrics': 0.3,  # ebit, ebitda
+                'calculated_ratios': 0.2,  # margins
+                'metadata': 0.1  # currency, scores
             }
             
-            # Calculate weighted score
-            score = 0.0
+            scores = {
+                'core_metrics': sum(1 for k in ['revenue', 'net_income'] if metrics.get(k) is not None) / 2,
+                'operational_metrics': sum(1 for k in ['ebit', 'ebitda'] if metrics.get(k) is not None) / 2,
+                'calculated_ratios': sum(1 for k in calculated if calculated.get(k) is not None) / len(calculated),
+                'metadata': 1.0 if data.get('analysis', {}).get('currency') else 0.0
+            }
             
-            # Add validation components
-            for key, weight in weights.items():
-                if key == 'confidence':
-                    # Handle confidence score separately
-                    confidence = data.get('confidence_score', 0)
-                    score += (confidence / 100.0) * weight
-                else:
-                    # Handle boolean validation results
-                    score += float(validations.get(key, False)) * weight
-            
-            # Ensure score is between 0 and 1
-            return max(0.0, min(1.0, score)) * 100
+            accuracy = sum(weights[k] * scores[k] for k in weights)
+            return round(accuracy * 100, 2)
             
         except Exception as e:
             logger.error(f"Error calculating accuracy: {e}")
             return 0.0
-
-        
